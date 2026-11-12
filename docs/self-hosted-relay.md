@@ -1,6 +1,6 @@
 # Self-hosted relay
 
-`packages/relay/src/node-relay.ts` is a Node server that speaks the Pimi relay protocol (v2). Run it when you want remote access through a box you control. The relay stays untrusted: it pipes opaque frames by session id, and the daemon and client secure the session end to end ([relay-endpoint-security.md](relay-endpoint-security.md)).
+`packages/relay/src/node-relay.ts` is a Node server that speaks the Pimi relay protocol (v2). Run it when you want remote access through a box you control. The relay stays untrusted: it pipes opaque frames by session id, and the daemon and client secure the session end to end (relay-endpoint-security.md).
 
 ## Behavior
 

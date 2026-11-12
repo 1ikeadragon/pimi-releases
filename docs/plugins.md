@@ -69,7 +69,7 @@ runtime modules, so consumers do not install these packages when adding the plug
 ```
 
 Declare the supported Pimi range and keep it current when adopting newer APIs. See the
-[requirements contract](../public-docs/plugins/reference.md#requirements), including
+[requirements contract](plugins/reference.md#requirements), including
 prerelease matching.
 
 The config key is the runtime plugin ID. The manifest ID is the default selected during install;
@@ -90,7 +90,7 @@ never deletes it. The global `pluginsEnabled` switch remains available.
 
 Plugin runtime translations follow the connected app, so never send a daemon locale through RPCs or add plugin resources to the app catalog. The installation owns the translation engine; native portal bridges must carry it alongside RPC and client-state contexts. Keep host label resolution at presentation time so language changes preserve the installation lifetime.
 
-The author contract is in [runtime translations](../public-docs/plugins/reference.md#runtime-translations).
+The author contract is in [runtime translations](plugins/reference.md#runtime-translations).
 
 ## Built-in plugins
 
@@ -125,7 +125,7 @@ availability and a diagnostic after the daemon resolves the executable. Configur
 environment, or enablement overrides under `agents.providers.muse`. Omit `extends` to keep
 the bundled integration; an entry with `extends` shadows it with a custom provider. See
 [provider contributions](#contribute-a-provider) for the contract and
-[Muse Code](../public-docs/muse-code.md) for setup, per-agent options, and version limitations.
+[Muse Code](muse-code.md) for setup, per-agent options, and version limitations.
 
 ## Install from a registry
 
@@ -146,7 +146,7 @@ Private registry credentials live in daemon config under
 Restart your daemon after changing these startup settings. Credentials go only to the registry,
 never artifact hosts or redirects. Git/npm use their own host authentication.
 
-The [registry contract](../packages/protocol/src/plugin-registry.ts) defines the record formats.
+The registry contract defines the record formats.
 
 ## Install a Git source
 
@@ -166,8 +166,8 @@ and ask for approval. `ls` reports the installed commit without contacting the r
 
 ## Managed source ownership
 
-The [public source reference](../public-docs/plugins/reference.md#plugin-sources) owns identifier
-syntax and npm prerequisites; the [publishing guide](../public-docs/plugins/publishing.md) owns distribution. The CLI resolves directory sources before
+The [public source reference](plugins/reference.md#plugin-sources) owns identifier
+syntax and npm prerequisites; the [publishing guide](plugins/publishing.md) owns distribution. The CLI resolves directory sources before
 calling `installPluginSource`; see the public source reference for CLI and app path semantics.
 Only the daemon reads plugin files and acquires sources.
 
@@ -245,10 +245,10 @@ icon set, or any `PluginIcon` through its `icon` prop; an unknown name or unsafe
 so it cannot break the plugin surface.
 Its controlled modal keeps presentation metadata on `<Modal title="…" icon={…}>` and body UI in
 `<Modal.Content>`. Body layout, sheet-aware scrolling, and clipboard actions follow the
-[host UI contract](../public-docs/plugins/reference.md#host-ui).
+[host UI contract](plugins/reference.md#host-ui).
 Plugin UI runs on desktop and mobile across multiple themes: color every `Text` from
 `theme.colors.foreground` or `theme.colors.foregroundMuted`, and size layout from `layout.compact`.
-See `public-docs/plugins/reference.md`.
+See `plugins/reference.md`.
 
 ### SDK import boundaries
 
@@ -288,7 +288,7 @@ The scaffold omits `"DOM"` from `tsconfig.json` and does not use `/// <reference
 browser globals are not available across the plugin. Put sanctioned web-only APIs in
 `client/web.ts`, declare only the globals that module uses, gate each export with
 `Platform.OS === "web"`, and provide a native implementation or no-op. See the
-[public plugin reference](../public-docs/plugins/reference.md#works-on-mobile) for the complete
+[public plugin reference](plugins/reference.md#works-on-mobile) for the complete
 pattern.
 
 ```ts
@@ -329,7 +329,7 @@ export default function contribute(client: PluginClientContext) {
 The contribution function must return cleanup for resources created by plugin code. Server cleanup
 may be async; Pimi waits for it when stopping the server plugin. Cleanup errors are logged and do
 not interrupt host teardown. Client installation retention and disposal follow the public
-[hosts and lifecycle contract](../public-docs/plugins/reference.md#hosts-and-lifecycle).
+[hosts and lifecycle contract](plugins/reference.md#hosts-and-lifecycle).
 
 Pimi owns the route, screen header, icon validation, close action, theme DTO, layout facts,
 and render error boundary. The contributed component owns the complete body below the header.
@@ -363,7 +363,7 @@ payload for a log, and the client's bootstrap buffer holds bytes only until the 
 attaches. Binary outputs reach only clients that send `pluginBinaryPayloads`. A binary input
 frame (`0x22`) becomes a synthetic `plugin.rpc.invoke.request` and runs through the normal message
 path, so it is authorized like any other invoke. The author contract, including the native upload
-limit, is in [stream events from the daemon](../public-docs/plugins/reference.md#subscriptions).
+limit, is in [stream events from the daemon](plugins/reference.md#subscriptions).
 
 `usePimi()` and the handler's `{ pimi }` context expose the same `PimiApi`: projects,
 workspaces, agents, terminals, providers, and daemon config. They do not expose connection lifecycle.
@@ -373,7 +373,7 @@ workspaces, agents, terminals, providers, and daemon config. They do not expose 
 `client.pimi`. Authors release their subscriptions in their own cleanup, and teardown (disable,
 reload, removal, host removal) disposes the client, which ends the rest; nothing is created or
 disposed per mounted surface. See the
-[public example](../public-docs/plugins/reference.md#use-the-pimi-sdk). Switching the screen's host
+[public example](plugins/reference.md#use-the-pimi-sdk). Switching the screen's host
 changes both `usePimi()` and `useRpc()` to that host's installation. An offline selected host fails there and never falls through to another
 installation. A server handler owns an IPC-backed daemon session for the life of its subprocess.
 Use plugin RPC for plugin-specific backend behavior that is not a normal Pimi operation.
@@ -381,7 +381,7 @@ Use plugin RPC for plugin-specific backend behavior that is not a normal Pimi op
 Host-targeted clients and discovery are owned by `packages/app/src/plugins/hosts`, with per-installation
 bindings supplied by the bundle loader. Bind the imperative getter to that installation; do not
 resolve ownership through a mutable current-plugin global. Keep observation ownership in this module
-and transport ownership in the app host runtime. See the [public host API contract](../public-docs/plugins/reference.md#discover-hosts-and-target-another-host).
+and transport ownership in the app host runtime. See the [public host API contract](plugins/reference.md#discover-hosts-and-target-another-host).
 
 Each subprocess gets an exclusively owned `plugin:<id>` session. That identity is reserved from
 normal clients, never resumes another session, and is cleaned immediately on exit without reconnect
@@ -400,7 +400,7 @@ in-memory bundles usable, and a later catalog retries persistence.
 
 When the same plugin contribution exists on multiple hosts, Pimi shows it once in the sidebar and
 adds a host picker to the screen header. The selected host supplies the bundle, RPC transport, and
-query cache. Explicit SDK targets follow the [host API contract](../public-docs/plugins/reference.md#discover-hosts-and-target-another-host).
+query cache. Explicit SDK targets follow the [host API contract](plugins/reference.md#discover-hosts-and-target-another-host).
 
 Workspace panels, Command Center items, and client slash commands are client contributions. The
 daemon transports their compiled bundle without interpreting placement or callbacks. Panel props
@@ -419,13 +419,13 @@ existing agent-context instances, but it cannot create an agent panel without an
 Command Center callbacks use the selected host's existing `PimiApi` for normal Pimi operations.
 They use typed plugin RPC only for plugin-specific backend work. Surface and panel navigation
 belongs to the app; plugins do not receive Expo Router or workspace-layout store access.
-See the public [navigation fields](../public-docs/plugins/reference.md#screens-and-sidebar-items)
-and [external links and workspace browsers](../public-docs/plugins/reference.md#external-links-and-workspace-browsers)
+See the public [navigation fields](plugins/reference.md#screens-and-sidebar-items)
+and [external links and workspace browsers](plugins/reference.md#external-links-and-workspace-browsers)
 for the author-facing contract.
 
 ### Plugin icons
 
-The [public reference](../public-docs/plugins/reference.md#icons) owns the author API: a contribution
+The [public reference](plugins/reference.md#icons) owns the author API: a contribution
 `icon` is a Lucide name, `{ svg }`, or a component.
 
 - `findSvgIconProblem` in the SDK root (`packages/plugin/src/icons.ts`) is the only SVG rule set.
@@ -446,7 +446,7 @@ The [public reference](../public-docs/plugins/reference.md#icons) owns the autho
 
 Server entries register async handlers with `server.addHook(name, handler)`, returning a cleanup
 function. Names follow `subject.operation.position`, ending in `before` or `after`. Waiting is a per-hook
-registry property, independent of position. The [hooks reference](../public-docs/plugins/hooks.md)
+registry property, independent of position. The [hooks reference](plugins/hooks.md)
 owns payloads, ordering, failure behavior, and examples. `agent.create.before` edits saved
 configuration; `agent.open.before` contributes launch-only `env`, `tools`, and `mcpServers` on
 every open. Executable tool definitions stay in the plugin process; only metadata crosses the boundary.
@@ -510,7 +510,7 @@ probes. The callback runs in the plugin process before discovery and receives th
 workspace target plus the resolved `launch` when a command is declared. Return a key covering
 effective configuration and execution environment, or
 `undefined` for target-specific caching. Ignore `force` when choosing identity. Existing providers
-need no change. See [catalogue ownership](providers.md#provider-snapshot-refresh-contract).
+need no change. See catalogue ownership.
 
 `send()` resolves after acceptance. Publish operation completion, prompt disposition, turn state,
 configuration, permissions, persistence, and complete timeline snapshots through `onEvent()`.
@@ -523,7 +523,7 @@ See [provider options](custom-providers.md#provider-options) for configuration a
 merge semantics.
 
 Providers add an optional veto to daemon baseline cleanup through the per-session
-[runtime safety query](../public-docs/plugins/providers.md#permit-idle-runtime-cleanup).
+[runtime safety query](plugins/providers.md#permit-idle-runtime-cleanup).
 The daemon calls the same `AgentSession.canStopRuntime()` interface for built-ins and plugins;
 the plugin bridge transports that query through the existing provider request/event protocol.
 
@@ -542,7 +542,7 @@ and `plugin-examples/provider-acp-transformer`.
 Provider-emitted plugin timeline items use the same renderer registration as transformed and
 daemon-appended plugin items. The direct example includes both sides. The renderer-only
 `plugin-examples/inline-thinking` example shows that timeline presentation remains independent of a
-provider implementation. The public [provider plugin guide](../public-docs/plugins/providers.md)
+provider implementation. The public [provider plugin guide](plugins/providers.md)
 owns author workflow, lifecycle, testing, and distribution guidance.
 
 `ProviderRegistration.icon` is a file path relative to the plugin directory, such as `icon.svg`.
@@ -552,14 +552,14 @@ string is never inline SVG or a URL.
 
 ## Usage sources
 
-Register a usage source from `index.server.ts` with `server.registerUsageSource()`. Import `UsageSourceRegistration` and normalization helpers from `@pimi/plugin/server/usage`. The plugin owns account discovery, harness labels, and credential-store reads; the daemon owns account grouping and the fetch cache. Agent popovers use only the agent's own login. The host-wide Usage modal falls back across an account's logins; any success shows usage only, and all failures show every login's labeled error and remedy. Follow the [usage source discovery contract](../public-docs/plugins/reference.md#usage-sources). The resolved launch environment crosses into the trusted, unsandboxed plugin subprocess for session discovery. Usage queries never run lifecycle hooks. Inputs are validated in the plugin process and remain daemon-side. `icon` uses the same SVG file rules as provider icons.
+Register a usage source from `index.server.ts` with `server.registerUsageSource()`. Import `UsageSourceRegistration` and normalization helpers from `@pimi/plugin/server/usage`. The plugin owns account discovery, harness labels, and credential-store reads; the daemon owns account grouping and the fetch cache. Agent popovers use only the agent's own login. The host-wide Usage modal falls back across an account's logins; any success shows usage only, and all failures show every login's labeled error and remedy. Follow the [usage source discovery contract](plugins/reference.md#usage-sources). The resolved launch environment crosses into the trusted, unsandboxed plugin subprocess for session discovery. Usage queries never run lifecycle hooks. Inputs are validated in the plugin process and remain daemon-side. `icon` uses the same SVG file rules as provider icons.
 
 When the host’s **Check usage** switch is off, the daemon rejects usage requests before discovery, without reading logins or calling vendors. Otherwise, the daemon calls discovery for `usage.list_reports`.
 
 ## Contribute sidebar items
 
 Sidebar header and footer items are plugin components, not descriptors. The
-[public reference](../public-docs/plugins/reference.md#sidebar-items) owns the author API. The host
+[public reference](plugins/reference.md#sidebar-items) owns the author API. The host
 lives in `packages/app/src/plugins/sidebar-items/`; `packages/app/src/sidebar-nav/model.ts` resolves
 one section's order from built-ins, plugin groups, and the section's preference
 (`sidebarNavItems` or `sidebarFooterItems`).
@@ -601,14 +601,14 @@ the lines around the opening line first.
 The handle checks every write against the version it last read or wrote, so two panels or a panel
 and an agent cannot silently overwrite each other. The daemon reports the file's kind (text,
 image, binary) with its stat from a bounded sniff, which is how Source claims text files without a
-read. See the [public file panel reference](../public-docs/plugins/reference.md#file-panels) for
+read. See the [public file panel reference](plugins/reference.md#file-panels) for
 the author API, selection, `DocumentFrame`, and the version requirement. The examples live in
 `plugin-examples/pdf-panel` and `plugin-examples/markdown-panel`.
 
 ## Contribute buttons
 
 Header buttons and composer pills share the client-only descriptor and registration lifecycle in
-`packages/app/src/plugins/buttons/`. The [public button reference](../public-docs/plugins/reference.md#header-buttons)
+`packages/app/src/plugins/buttons/`. The [public button reference](plugins/reference.md#header-buttons)
 owns the author API and placement rules. Keep presentation policy in this module so another
 placement can reuse behavior without copying registration or action state. The header overflow
 and the compact workspace menu share one builder that turns buttons into menu rows and pages; the
@@ -623,7 +623,7 @@ Request observation with `client.pimi.agents.list({ subscribe: {} })` and consum
 `subscription` handle. Plain `list()` and agent/workspace directory `.subscribe(handler)` listeners create no daemon
 demand. Provider and project `subscribe()` calls establish their own demand. Each
 list-and-subscribe call has its own server ID, even for the same query; see
-[shared delivery behavior](protocol-compatibility.md#owned-observations). Handle snapshots
+shared delivery behavior. Handle snapshots
 also run after reconnect; replace your view before applying its subsequent updates. An installation
 stays loaded during a dropped connection while the app retains its `DaemonClient` object. An
 unchanged installation does not rerun setup on reconnect, so refresh state from those snapshots
@@ -736,7 +736,7 @@ external-resource presentation, so it remains readable if the plugin is removed.
 
 Register ordinary components with `client.addSettingsScreen` and open them with `openSettings`.
 The host settings shell owns navigation and layout; plugin content must not add another page
-scroll view or header. See the [author contract](../public-docs/plugins/reference.md#settings-screens)
+scroll view or header. See the [author contract](plugins/reference.md#settings-screens)
 and `plugin-examples/settings` for the named UI components and persistence API.
 
 Settings storage is scoped to the runtime installation ID, never the source path or manifest ID.
@@ -754,7 +754,7 @@ subscription cleanup belongs in the plugin's contribution cleanup when it outliv
 same semantic builders as the built-in themes, so plugins do not depend on the complete app token
 contract. Unistyles needs every theme name at `StyleSheet.configure` time, so
 `packages/app/src/styles/theme.ts` reserves one light and one dark plugin slot. The appearance
-provider rewrites the matching slot when the selection changes. See [unistyles.md](unistyles.md)
+provider rewrites the matching slot when the selection changes. See unistyles.md
 for the runtime-patching rules the appearance settings share.
 
 `addTheme` is a client registration and belongs in `index.client.tsx`.
@@ -768,7 +768,7 @@ stable rather than arrival-ordered. The app resolves that id
 against the installed catalog on every change; an id nothing contributes falls back to the default
 preference instead of painting the reserved slot's placeholder colors.
 
-Existing plugin authors should follow the standalone [v0.8 runtime-entry migration guide](../public-docs/plugins/migration.md).
+Existing plugin authors should follow the standalone [v0.8 runtime-entry migration guide](plugins/migration.md).
 
 See `plugin-examples/local-plugin` for a native surface, `plugin-examples/linear` for a complete
 attachment-source example, `plugin-examples/timeline-items` for timeline projection, and
