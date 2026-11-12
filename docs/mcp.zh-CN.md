@@ -1,0 +1,192 @@
+---
+title: MCP 参考
+description: Agent 用来管理 Agent、工作区、脚本、终端、自动化和 heartbeat 的 Pimi 工具参考。
+nav: MCP 参考
+---
+
+# MCP 参考 {#mcp-reference}
+
+[启用 Pimi 工具](/docs/orchestration#get-started)，让 Agent 获得这套工具目录。用自然语言说明想要的结果，或者使用下面的工具接口。
+
+## 配置 {#configuration}
+
+| 设置                          | 默认值 | 用途                                    |
+| ----------------------------- | ------ | --------------------------------------- |
+| `daemon.mcp.enabled`          | `true` | 运行 MCP 服务器。                       |
+| `daemon.mcp.injectIntoAgents` | `true` | 让 Pimi 启动的 Agent 可以使用它的工具。 |
+
+根据 Provider 的不同，Pimi 通过其原生工具接口或 MCP 提供工具，能力是相同的。修改注入设置后，请启动新的 Agent 或重新加载已有的 Agent。
+
+## 按 Provider 限制 Pimi 工具 {#limit-pimi-tools-by-provider}
+
+当不同的 Agent 配置应获得不同的 Pimi 工具时，请使用 Provider 策略。先全局启用工具注入，然后在你启动所用的确切 Provider ID 上添加 `pimiTools`：
+
+```json
+{
+  "$schema": "https://github.com/1ikeadragon/pimi/blob/main/README.md.config.v1.json",
+  "version": 1,
+  "daemon": {
+    "mcp": {
+      "enabled": true,
+      "injectIntoAgents": true
+    }
+  },
+  "agents": {
+    "providers": {
+      "codex-lead": {
+        "extends": "codex",
+        "label": "Codex Lead"
+      },
+      "codex-worker": {
+        "extends": "codex",
+        "label": "Codex Worker",
+        "pimiTools": {
+          "disabledTools": ["create_agent", "send_agent_prompt", "kill_agent"]
+        }
+      },
+      "codex-isolated": {
+        "extends": "codex",
+        "label": "Codex Isolated",
+        "pimiTools": {
+          "enabled": false
+        }
+      }
+    }
+  }
+}
+```
+
+编辑 `~/.pimi/config.json` 后运行 `pimi reload`，然后启动新的 Agent 或重新加载已有的 Agent。正在运行的会话保留它启动时得到的工具目录。
+
+省略 `pimiTools` 会启用完整的工具目录。把 `enabled` 设为 `false` 会移除整个目录，在 `disabledTools` 中列出确切的工具 ID 则只移除所选的工具。自定义配置不会从 `extends` 继承这一策略；请为每个自定义 Provider ID 分别配置。
+
+浏览器工具仍然需要启用浏览器工具并连接一个浏览器主机。仅用于语音的 `speak` 工具不受此策略控制。
+
+这项设置限制的是呈现给 Agent 的工具目录。对于可以通过 shell 访问主机的 Agent，它不是安全边界。
+
+## 心智模型 {#mental-model}
+
+工作区决定工作在哪里进行；Agent 的父子关系决定工作归谁所有。
+
+- 不带 `workspaceId` 调用 `create_agent` 的 Agent，会在它自己的工作区中得到一个子 Agent。
+- 传入 `workspaceId` 会把子 Agent 放到另一个工作区，但不会让它脱离父 Agent。
+- 没有工作区的顶层 MCP 调用方会得到一个新的本地工作区。
+- 需要 worktree 隔离、特定分支或 Pull Request 检出时，请先创建工作区。
+
+MCP 不提供解除 Agent 父子关系的工具。解除关系是用户在应用或 CLI 中手动执行的操作。
+
+## 工具 {#tools}
+
+### Agent {#agents}
+
+| 工具                 | 功能                                                                                                                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_agent`       | 创建 Agent，可用 `workspaceId` 把它放到已有的工作区。用 `initialPrompt` 开始工作；不等待完成就返回。`background: true` 会把它从标签页、默认列表、你的子 Agent 列表和通知中隐藏；你仍会收到它的完成通知。省略时继承你自己的设置。 |
+| `send_agent_prompt`  | 用 `agentId` 和 `prompt` 发送提示词；不等待完成就返回。                                                                                                                                                                          |
+| `get_agent_status`   | 返回 Agent 的最新快照。                                                                                                                                                                                                          |
+| `list_agents`        | 以精简元数据列出最近的 Agent；`includeBackground: true` 会包含后台工作。                                                                                                                                                         |
+| `cancel_agent`       | 中止 Agent 当前的运行，但保留该 Agent。                                                                                                                                                                                          |
+| `archive_agent`      | 软删除 Agent，并把它从活动列表中移除。                                                                                                                                                                                           |
+| `kill_agent`         | 永久终止 Agent 会话。                                                                                                                                                                                                            |
+| `update_agent`       | 更新 Agent 的名称、标签或运行时设置，例如模式、模型、思考选项和功能。                                                                                                                                                            |
+| `get_agent_activity` | 以整理后的摘要返回 Agent 最近的时间线条目。                                                                                                                                                                                      |
+| `set_agent_mode`     | 切换 Agent 的会话模式。                                                                                                                                                                                                          |
+
+Pimi Agent 默认会收到完成、错误和权限通知；设置 `notifyOnFinish: false` 可以关闭它们。外部 MCP 客户端使用 `get_agent_status` 和 `get_agent_activity` 查看结果。
+
+### 工作区 {#workspaces}
+
+| 工具                | 功能                                                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `create_workspace`  | 创建本地工作区或使用 worktree 隔离的工作区。worktree 可以从某个分支分出、检出一个分支或一个 PR。`background: true` 会把它从默认列表和侧边栏中隐藏，同时保留历史记录和按 ID 访问。省略时继承调用方 Agent 工作区的设置；没有调用方时默认为 false。 |
+| `list_workspaces`   | 列出活动的工作区及其目录和隔离方式。使用 `includeBackground: true` 可以包含后台工作区。                                                                                                                                                          |
+| `rename_workspace`  | 修改当前或指定工作区在界面上显示的名称。                                                                                                                                                                                                         |
+| `archive_workspace` | 归档工作区及其拥有的会话。                                                                                                                                                                                                                       |
+
+对于 worktree 隔离，`create_workspace` 接受与应用中相同的常用选择：从某个基础分支分出、检出一个已有分支，或检出一个 Pull Request。worktree 仍然是工作区生命周期的实现细节。
+
+### 工作区脚本 {#workspace-scripts}
+
+这些工具管理在工作区的 `pimi.json` 中配置的脚本。每个工具都需要显式的 `workspaceId`；启动和停止还需要已配置的 `scriptName`。
+
+| 工具                     | 功能                                                                  |
+| ------------------------ | --------------------------------------------------------------------- |
+| `list_workspace_scripts` | 列出已配置的脚本及其生命周期、终端、端口、代理 URL 和健康状态元数据。 |
+| `start_workspace_script` | 通过 Pimi 的托管启动器启动已配置的脚本。                              |
+| `stop_workspace_script`  | 通过受监管的终端停止正在运行的脚本。                                  |
+
+`pimi.json` 的配置见 [Git worktree](/docs/worktrees#scripts-and-services)。
+
+### 终端 {#terminals}
+
+| 工具                 | 功能                                       |
+| -------------------- | ------------------------------------------ |
+| `list_terminals`     | 列出某个工作目录或所有工作目录的终端会话。 |
+| `create_terminal`    | 为某个工作目录创建终端会话。               |
+| `kill_terminal`      | 结束终端会话。                             |
+| `capture_terminal`   | 捕获终端会话的纯文本输出。                 |
+| `send_terminal_keys` | 向终端会话发送文本或特殊按键标记。         |
+
+### 自动化与 heartbeat {#automations-and-heartbeats}
+
+[自动化](/docs/automations)每次运行都会启动一个新的 Agent。heartbeat 会把一段提示词发回调用它的 Agent。
+
+| 工具                  | 功能                                                                                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_automation`   | 用名称和提示词创建自动化，按 cron 节奏运行；省略 `cron` 时只能手动运行。除非指定 `provider`，否则使用调用者的 Provider、模型、模式和 thinking 设置。 |
+| `list_automations`    | 列出该主机上的所有自动化。                                                                                                                           |
+| `inspect_automation`  | 查看自动化及其审计历史。                                                                                                                             |
+| `pause_automation`    | 暂停一个活动的自动化。                                                                                                                               |
+| `delete_automation`   | 删除你创建的、仍在等待审批的自动化。                                                                                                                 |
+| `automation_runs`     | 列出自动化最近的运行，最新的在前。                                                                                                                   |
+| `run_automation_once` | 立即启动一次活动自动化的运行。                                                                                                                       |
+| `create_heartbeat`    | 稍后给自己发送一段提示词：`cron`、`every`（至少 30 秒）、`in`（延迟后触发一次）或 `at`（在某个 ISO 时间触发一次）只能指定一个。                      |
+| `delete_heartbeat`    | 删除你的某个 heartbeat。                                                                                                                             |
+| `list_heartbeats`     | 列出你的 heartbeat 及各自的下次触发时间。                                                                                                            |
+
+`create_automation` 创建的自动化总是处于 pending 状态，在用户[审批](/docs/automations#approval)之前不会运行。Agent 不能审批、恢复或更新自动化。要修改 heartbeat，请删除它并创建一个替代的。
+
+### Agent 配置 {#agent-profiles}
+
+| 工具            | 功能                                                                          |
+| --------------- | ----------------------------------------------------------------------------- |
+| `list_profiles` | 返回主机上保存的 Agent 配置，包括它们的说明和启动设置。没有配置时返回空列表。 |
+
+委派之前，请阅读每个配置的 `notes`，选择用户指定的配置或适合该任务的配置。设置方法和说明示例见 [Agent 配置](/docs/agent-profiles)。
+
+`create_agent` 没有配置参数，并且需要 `provider/model` 组合。如果配置中没有模型，请先对其 Provider 调用 `list_models`，为任务选择一个可用的模型再启动。把所选配置的值应用到启动请求中：
+
+| 配置字段                    | `create_agent` 字段                                            |
+| --------------------------- | -------------------------------------------------------------- |
+| `provider` 和可选的 `model` | `provider`，格式为 `provider/model`，使用保存的或发现的模型 ID |
+| `modeId`                    | `settings.modeId`                                              |
+| `thinkingOptionId`          | `settings.thinkingOptionId`                                    |
+| `featureValues`             | `settings.features`                                            |
+| `notes`                     | 供编排者选择时参考；任务放在 `initialPrompt` 中                |
+
+省略不存在的可选设置。如果没有合适的配置，请用 Provider 发现来选择可用的设置。
+
+### Provider {#providers}
+
+| 工具               | 功能                                        |
+| ------------------ | ------------------------------------------- |
+| `list_providers`   | 列出已配置的 Agent Provider、可用性和模式。 |
+| `list_models`      | 列出某个 Agent Provider 的模型。            |
+| `inspect_provider` | 查看精简的 Provider 能力和草稿功能设置。    |
+
+### 权限 {#permissions}
+
+| 工具                       | 功能                                |
+| -------------------------- | ----------------------------------- |
+| `list_pending_permissions` | 返回所有 Agent 中待处理的权限请求。 |
+| `respond_to_permission`    | 批准或拒绝一个待处理的权限请求。    |
+
+### 浏览器 {#browser}
+
+浏览器自动化需要主动开启，它会添加用于打开标签页、读取页面、点击、输入和截图的工具。见[浏览器工具参考](/docs/browser-tools)。
+
+### 语音 {#voice}
+
+| 工具    | 功能                                                           |
+| ------- | -------------------------------------------------------------- |
+| `speak` | 通过 daemon 管理的语音输出朗读文本。仅在启用语音的会话中可用。 |
